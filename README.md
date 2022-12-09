@@ -10,7 +10,7 @@ The client is first presented with a login window. The login window has 2 fields
 If the server is not running on the IP address specified by the client, the client will get an error message *"Failed to connect to Server"* when they click on the connect button.   
 ![failed_to_connect_to_server](https://user-images.githubusercontent.com/76788207/206730499-42c5e037-c270-431b-9f90-325c88ab41b2.png)
 
-If the server is running on the IP address specified by the client, the client will be presented with a chat window, after they click on the connect button, where they can see all the users that are connected to the server and can chat with them. The image below shows 2 different clients talking to each other.
+If the server is running on the IP address specified by the client, the client will be presented with a chat window, after they click on the connect button, where they can see all the users that are connected to the same server and can chat with them. The image below shows 2 different clients talking to each other.
 ![client_chat](https://user-images.githubusercontent.com/76788207/206730485-ecc8f1d7-6f8b-45fb-aa7a-dadbc2dffd35.png)
 
 ### Server
