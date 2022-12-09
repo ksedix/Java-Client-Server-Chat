@@ -7,10 +7,10 @@ A Client-Server chat application made in Java using Java Swing for front-end and
 The client is first presented with a login window. The login window has 2 fields - the **username** of the client and the **server IP address** that the client wishes to connect to. The default Server IP Address is localhost - the clients own computer.
 ![client window](client_login.png) 
 
-If the server is not running on the IP address specified by the client, the client will get an error message *"Failed to connect to Server"*.
+If the server is not running on the IP address specified by the client, the client will get an error message *"Failed to connect to Server"* when they click on the connect button.   
 ![client window](failed_to_connect_to_server.png)
 
-If the server is running on the IP address specified by the client, the client will be presented with a chat window where they can see all the users that are connected to the server and can chat with them. The image below shows 2 different clients talking to each other.
+If the server is running on the IP address specified by the client, the client will be presented with a chat window, after they click on the connect button, where they can see all the users that are connected to the server and can chat with them. The image below shows 2 different clients talking to each other.
 ![client window](client_chat.png)
 
 ### Server
