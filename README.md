@@ -23,3 +23,9 @@ The server is made up of a single window with 4 buttons:
 
 When we start the server, it will tell us that the server is listening for connections on port 1234. Now, clients can connect to it if they specify the correct Server IP address.  
 <img src="server_started.png">
+
+## User Manual
+
+There are 2 ways to use the application:
+- Download **Client.jar** and **Server.jar** from the repository
+- Clone the entire project and run **Client.java** to start the Client and **Server.java** to start the Server.
