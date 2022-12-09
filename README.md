@@ -25,6 +25,6 @@ When we start the server, it will tell us that the server is listening for conne
 <img src="server_started.png">
 
 ## How To Run
-There are 2 ways to use the application:
-- Download **Client.jar** and **Server.jar** from the repository
+There are 2 ways to run the application:
+- Download **Client.jar** and **Server.jar** from the repository and run them.
 - Clone the entire project and run **Client.java** to start the Client and **Server.java** to start the Server.
