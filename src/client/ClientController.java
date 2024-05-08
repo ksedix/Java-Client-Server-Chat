@@ -1,9 +1,14 @@
 package client;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.IOException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * The client controller will connect the client view and the client model.
@@ -38,9 +43,19 @@ public class ClientController extends JFrame {
                         //System.out.println("Change to chatPanel");
                         clientView.showChat();
                         setTitle("Client- "+username);
-                    } catch (IOException exception) {
+                    } catch (IOException | ClassNotFoundException exception) {
                         clientView.setErrorMessage("Failed to connect to the server");
                         exception.printStackTrace();
+                    } catch (NoSuchPaddingException noSuchPaddingException) {
+                        noSuchPaddingException.printStackTrace();
+                    } catch (IllegalBlockSizeException illegalBlockSizeException) {
+                        illegalBlockSizeException.printStackTrace();
+                    } catch (NoSuchAlgorithmException noSuchAlgorithmException) {
+                        noSuchAlgorithmException.printStackTrace();
+                    } catch (BadPaddingException badPaddingException) {
+                        badPaddingException.printStackTrace();
+                    } catch (InvalidKeyException invalidKeyException) {
+                        invalidKeyException.printStackTrace();
                     }
                 }
 

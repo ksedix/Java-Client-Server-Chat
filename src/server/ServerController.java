@@ -55,6 +55,7 @@ public class ServerController extends JFrame {
         serverView.getShutDownButton().addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+
                 System.out.println("Shut down the server...TODO");
             }
         });

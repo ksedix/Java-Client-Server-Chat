@@ -2,10 +2,17 @@ package client;
 
 import message.Message;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import javax.swing.*;
 import java.io.*;
 import java.net.Socket;
+import java.security.*;
 import java.util.ArrayList;
+import java.util.Base64;
 
 /**
  * Stores all the data of our application such as the chat log between the client and the server as well
@@ -23,30 +30,60 @@ public class ClientModel {
     private ObjectInputStream objectInputStream;
     private Socket clientSocket;
     private String username;
+    private PrivateKey privateKey;
+    private PublicKey publicKey;
+    private SecretKey secretKey;
 
     //OBSERVER. ClientView observes the clientModel. The clientModel is OBSERVABLE
     private ClientView clientView;
 
-    public void connect(String username, String serverAddress) throws IOException {
+    public static java.security.KeyPair generateKeyPair(){
+        KeyPairGenerator keyPairGenerator = null;
+        try {
+            keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        keyPairGenerator.initialize(2048);
+        return keyPairGenerator.generateKeyPair();
+    }
+
+    public ClientModel(){
+        //Generate private and public keypair used for encryption/decryption
+        KeyPair keyPair = generateKeyPair();
+        this.publicKey = keyPair.getPublic();
+        this.privateKey = keyPair.getPrivate();
+    }
+
+    public void connect(String username, String serverAddress) throws IOException, ClassNotFoundException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
         clientSocket = new Socket(serverAddress,1234);
         this.username = username;
         objectOutputStream = new ObjectOutputStream(clientSocket.getOutputStream());
         objectInputStream = new ObjectInputStream(clientSocket.getInputStream());
         //The first thing the client writes to the server is their username
-        //this is so that the server can add them to their online user list
+        //this is so that the server can add them to their online user list. This is not encrypted
         objectOutputStream.writeObject(username);
+        //the client sends the server its public key
+        objectOutputStream.writeObject(this.publicKey);
+        //The server will respond with the encrypted session key which it will send to the client
+        Message message = (Message) objectInputStream.readObject();
+        String secretKey = message.decrypt(privateKey);
+        //System.out.println(secretKey);
+        this.secretKey = new SecretKeySpec(Base64.getDecoder().decode(secretKey),"AES");
+        //System.out.println(Base64.getEncoder().encodeToString(this.secretKey.getEncoded()));
     }
 
     public void sendMessage(String message) throws IOException {
-        objectOutputStream.writeObject(new Message(username+": "+message));
+        objectOutputStream.writeObject(new Message(username+": "+message,secretKey));
     }
 
-    public void readMessage() throws IOException, ClassNotFoundException {
+    public void readMessage() throws IOException, ClassNotFoundException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
         Object obj = objectInputStream.readObject();
 
         if (obj instanceof Message){
             Message message = (Message) obj;
-            messages.add(message.toString());
+            //decrypt the message and add the decrypted message to the messages array
+            messages.add(message.decrypt(secretKey));
             clientView.updateMessages();
         } else {
             ArrayList<String> onlineUsers = (ArrayList<String>) obj;
@@ -66,6 +103,16 @@ public class ClientModel {
                 } catch (IOException e) {
                     e.printStackTrace();
                 } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
+                } catch (NoSuchPaddingException e) {
+                    e.printStackTrace();
+                } catch (IllegalBlockSizeException e) {
+                    e.printStackTrace();
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                } catch (BadPaddingException e) {
+                    e.printStackTrace();
+                } catch (InvalidKeyException e) {
                     e.printStackTrace();
                 }
             }
