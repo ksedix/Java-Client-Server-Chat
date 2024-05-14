@@ -95,8 +95,9 @@ public class ClientModel {
         Object obj = objectInputStream.readObject();
         if (obj instanceof Message){
             Message message = (Message) obj;
-            System.out.println(message.decrypt(sessionKey));
-            messages.add(message.toString());
+            //Decrypt all messages that the server sends to us(client) and add them to the client log in plain text
+            //so that the client can read the messages
+            messages.add(message.decrypt(this.sessionKey));
             clientView.updateMessages();
         } else {
             ArrayList<String> onlineUsers = (ArrayList<String>) obj;
