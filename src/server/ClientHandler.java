@@ -25,33 +25,32 @@ public class ClientHandler implements Runnable{
     //Can't be null, otherwise we will not be able to add items to it
     private static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
     private ServerModel serverModel;
-    private PublicKey publicKey;
     private SecretKey sessionKey;
 
-    public ClientHandler(Socket clientConnection, ServerModel serverModel) throws IOException, ClassNotFoundException {
+    public ClientHandler(Socket clientConnection, ServerModel serverModel) throws IOException, ClassNotFoundException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         this.clientSocket = clientConnection;
         this.serverModel = serverModel;
-        //Q: Is there any other way of doing this?
-        this.sessionKey = serverModel.getSecretKey();
+        //the session key will be sent to the client
+        this.sessionKey = serverModel.getSessionKey();
 
         clientHandlers.add(this);
 
         this.objectInputStream = new ObjectInputStream(clientSocket.getInputStream());
         this.objectOutputStream = new ObjectOutputStream(clientSocket.getOutputStream());
-        //the username is the first item sent so read it from the input stream
+
+        //read the username that the client sends to the server, this is the first item that client sends
         this.username = (String) objectInputStream.readObject();
-        //the public key is the second item sent so read it from the input stream
-        this.publicKey = (PublicKey) objectInputStream.readObject();
+        //Read the public key that the client sends to the server. This is the second item that the client sends
+        PublicKey publicKey = (PublicKey) objectInputStream.readObject();
+        //write the secret session key to the client and encrypt it with the public key that you read from the client.
+        objectOutputStream.writeObject(new Message(Base64.getEncoder().encodeToString(sessionKey.getEncoded()),publicKey));
 
         serverModel.addOnlineUser(username);
         serverModel.addMessage(new Message("SERVER: "+username+" has connected to the server"));
 
-        //Send the encrypted session key to the user. Turn the session key into a string first so that it can be sent as a Message
-        sendMessage(new Message(Base64.getEncoder().encodeToString(sessionKey.getEncoded()),publicKey));
-
-        broadCastMessage(new Message("SERVER: "+username+" has connected to the server",sessionKey));
-        //the broadcast online user list is not encrypted
+        broadCastMessage(new Message("SERVER: "+username+" has connected to the server"));
         broadCastUsers(serverModel.getOnlineUsers());
+
 
     }
 
@@ -79,11 +78,11 @@ public class ClientHandler implements Runnable{
         objectOutputStream.writeObject(message);
     }
 
-    public void readMessage() throws IOException, ClassNotFoundException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
+    public void readMessage() throws IOException, ClassNotFoundException {
         while (true){
             Message message = (Message) objectInputStream.readObject();
             broadCastMessage(message);
-            serverModel.addEncryptedMessage(message);
+            serverModel.addMessage(message);
         }
     }
 
@@ -92,21 +91,11 @@ public class ClientHandler implements Runnable{
         try {
             readMessage();
         } catch (IOException e) {
+            closeConnection();
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (IllegalBlockSizeException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (BadPaddingException e) {
-            e.printStackTrace();
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-        } finally {
             closeConnection();
+            e.printStackTrace();
         }
     }
 
