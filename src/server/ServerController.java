@@ -1,9 +1,14 @@
 package server;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * The ServerController deals with user input and connects the serverView and the serverModel together.
@@ -79,6 +84,16 @@ public class ServerController extends JFrame {
                 try {
                     serverModel.startServer();
                 } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (NoSuchPaddingException e) {
+                    e.printStackTrace();
+                } catch (IllegalBlockSizeException e) {
+                    e.printStackTrace();
+                } catch (BadPaddingException e) {
+                    e.printStackTrace();
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                } catch (InvalidKeyException e) {
                     e.printStackTrace();
                 } catch (ClassNotFoundException e) {
                     e.printStackTrace();

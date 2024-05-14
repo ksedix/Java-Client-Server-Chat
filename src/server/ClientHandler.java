@@ -2,11 +2,19 @@ package server;
 
 import message.Message;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.util.ArrayList;
+import java.util.Base64;
 
 public class ClientHandler implements Runnable{
 
@@ -17,15 +25,25 @@ public class ClientHandler implements Runnable{
     //Can't be null, otherwise we will not be able to add items to it
     private static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
     private ServerModel serverModel;
+    private SecretKey sessionKey;
 
-    public ClientHandler(Socket clientConnection, ServerModel serverModel) throws IOException, ClassNotFoundException {
+    public ClientHandler(Socket clientConnection, ServerModel serverModel) throws IOException, ClassNotFoundException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         this.clientSocket = clientConnection;
         this.serverModel = serverModel;
+        //the session key will be sent to the client
+        this.sessionKey = serverModel.getSessionKey();
+
         clientHandlers.add(this);
 
         this.objectInputStream = new ObjectInputStream(clientSocket.getInputStream());
         this.objectOutputStream = new ObjectOutputStream(clientSocket.getOutputStream());
+
+        //read the username that the client sends to the server, this is the first item that client sends
         this.username = (String) objectInputStream.readObject();
+        //Read the public key that the client sends to the server. This is the second item that the client sends
+        PublicKey publicKey = (PublicKey) objectInputStream.readObject();
+        //write the secret session key to the client and encrypt it with the public key that you read from the client.
+        objectOutputStream.writeObject(new Message(Base64.getEncoder().encodeToString(sessionKey.getEncoded()),publicKey));
 
         serverModel.addOnlineUser(username);
         serverModel.addMessage(new Message("SERVER: "+username+" has connected to the server"));

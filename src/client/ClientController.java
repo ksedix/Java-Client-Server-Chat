@@ -1,9 +1,14 @@
 package client;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.IOException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * The client controller will connect the client view and the client model.
@@ -41,6 +46,18 @@ public class ClientController extends JFrame {
                     } catch (IOException exception) {
                         clientView.setErrorMessage("Failed to connect to the server");
                         exception.printStackTrace();
+                    } catch (NoSuchPaddingException noSuchPaddingException) {
+                        noSuchPaddingException.printStackTrace();
+                    } catch (IllegalBlockSizeException illegalBlockSizeException) {
+                        illegalBlockSizeException.printStackTrace();
+                    } catch (NoSuchAlgorithmException noSuchAlgorithmException) {
+                        noSuchAlgorithmException.printStackTrace();
+                    } catch (BadPaddingException badPaddingException) {
+                        badPaddingException.printStackTrace();
+                    } catch (InvalidKeyException invalidKeyException) {
+                        invalidKeyException.printStackTrace();
+                    } catch (ClassNotFoundException classNotFoundException) {
+                        classNotFoundException.printStackTrace();
                     }
                 }
 
@@ -77,6 +94,16 @@ public class ClientController extends JFrame {
                     ex.printStackTrace();
                     clientModel.disconnect();
                     clientView.showHome();
+                } catch (IllegalBlockSizeException illegalBlockSizeException) {
+                    illegalBlockSizeException.printStackTrace();
+                } catch (NoSuchPaddingException noSuchPaddingException) {
+                    noSuchPaddingException.printStackTrace();
+                } catch (BadPaddingException badPaddingException) {
+                    badPaddingException.printStackTrace();
+                } catch (NoSuchAlgorithmException noSuchAlgorithmException) {
+                    noSuchAlgorithmException.printStackTrace();
+                } catch (InvalidKeyException invalidKeyException) {
+                    invalidKeyException.printStackTrace();
                 }
             }
         });
@@ -92,6 +119,16 @@ public class ClientController extends JFrame {
                         clientView.getMessageField().setText("");
                     } catch (IOException ex) {
                         ex.printStackTrace();
+                    } catch (IllegalBlockSizeException illegalBlockSizeException) {
+                        illegalBlockSizeException.printStackTrace();
+                    } catch (NoSuchPaddingException noSuchPaddingException) {
+                        noSuchPaddingException.printStackTrace();
+                    } catch (BadPaddingException badPaddingException) {
+                        badPaddingException.printStackTrace();
+                    } catch (NoSuchAlgorithmException noSuchAlgorithmException) {
+                        noSuchAlgorithmException.printStackTrace();
+                    } catch (InvalidKeyException invalidKeyException) {
+                        invalidKeyException.printStackTrace();
                     }
                 }
             }

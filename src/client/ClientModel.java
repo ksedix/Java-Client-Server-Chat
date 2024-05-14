@@ -2,10 +2,17 @@ package client;
 
 import message.Message;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import javax.swing.*;
 import java.io.*;
 import java.net.Socket;
+import java.security.*;
 import java.util.ArrayList;
+import java.util.Base64;
 
 /**
  * Stores all the data of our application such as the chat log between the client and the server as well
@@ -24,10 +31,36 @@ public class ClientModel {
     private Socket clientSocket;
     private String username;
 
+    //NEW FIELDS
+    //The private and public RSA key will be used to securely exchange the session key with the server
+    private PublicKey publicKey;
+    private PrivateKey privateKey;
+    private SecretKey sessionKey;
+
+    private static KeyPair generateKeyPair(){
+        //Create a new keypair generator that generates an RSA key pair
+        KeyPairGenerator keyPairGenerator = null;
+        try {
+            keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        //Set the key size to 2048 bits, this will be enough for our 1-time use of the key
+        keyPairGenerator.initialize(2048);
+        return keyPairGenerator.generateKeyPair();
+    }
+
+    public ClientModel(){
+        KeyPair keyPair = generateKeyPair();
+        this.privateKey = keyPair.getPrivate();
+        this.publicKey = keyPair.getPublic();
+    }
+
+
     //OBSERVER. ClientView observes the clientModel. The clientModel is OBSERVABLE
     private ClientView clientView;
 
-    public void connect(String username, String serverAddress) throws IOException {
+    public void connect(String username, String serverAddress) throws IOException, ClassNotFoundException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
         clientSocket = new Socket(serverAddress,1234);
         this.username = username;
         objectOutputStream = new ObjectOutputStream(clientSocket.getOutputStream());
@@ -35,17 +68,34 @@ public class ClientModel {
         //The first thing the client writes to the server is their username
         //this is so that the server can add them to their online user list
         objectOutputStream.writeObject(username);
+
+        //write the public key to the server so that it can use it to encrypt the secret session key
+        //we will then use the private key to decrypt the session key
+        //the public key is not written in encrypted form, but this is not an issue since it can only be used
+        //for encryption. Only the person with the private key(i.e. client) can decrypt messages encrypted with public key
+        objectOutputStream.writeObject(this.publicKey);
+
+        //Read the encrypted session key which is sent as a message from the server to the client
+        //this is the first message that the server will send from the client
+        Message encryptedSessionKey = (Message) objectInputStream.readObject();
+        //Decrypt the message to obtain a string representation of the unencrypted session key
+        String sessionKey = encryptedSessionKey.decrypt(this.privateKey);
+        //Turn the String representation of the session key into a real AES session key that can
+        //be used for encryption/decryption. Store it in a private field(very important)
+        this.sessionKey = new SecretKeySpec(Base64.getDecoder().decode(sessionKey),"AES");
+
     }
 
-    public void sendMessage(String message) throws IOException {
-        objectOutputStream.writeObject(new Message(username+": "+message));
+    public void sendMessage(String message) throws IOException, IllegalBlockSizeException, NoSuchPaddingException, BadPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+        //send a message that is encrypted using the symmetric session AES session key
+        objectOutputStream.writeObject(new Message(username+": "+message,this.sessionKey));
     }
 
-    public void readMessage() throws IOException, ClassNotFoundException {
+    public void readMessage() throws IOException, ClassNotFoundException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
         Object obj = objectInputStream.readObject();
-
         if (obj instanceof Message){
             Message message = (Message) obj;
+            System.out.println(message.decrypt(sessionKey));
             messages.add(message.toString());
             clientView.updateMessages();
         } else {
@@ -66,6 +116,16 @@ public class ClientModel {
                 } catch (IOException e) {
                     e.printStackTrace();
                 } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
+                } catch (NoSuchPaddingException e) {
+                    e.printStackTrace();
+                } catch (IllegalBlockSizeException e) {
+                    e.printStackTrace();
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                } catch (BadPaddingException e) {
+                    e.printStackTrace();
+                } catch (InvalidKeyException e) {
                     e.printStackTrace();
                 }
             }
