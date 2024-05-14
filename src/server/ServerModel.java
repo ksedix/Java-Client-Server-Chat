@@ -85,6 +85,11 @@ public class ServerModel {
         serverView.updateMessages();
     }
 
+    public void addEncryptedMessage(Message encryptedMessage) throws NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
+        messages.add(encryptedMessage.decrypt(this.sessionKey));
+        serverView.updateMessages();
+    }
+
     public String getLatestMessage(){
         return messages.get(messages.size()-1);
     }

@@ -48,7 +48,9 @@ public class ClientHandler implements Runnable{
         serverModel.addOnlineUser(username);
         serverModel.addMessage(new Message("SERVER: "+username+" has connected to the server"));
 
-        broadCastMessage(new Message("SERVER: "+username+" has connected to the server"));
+        //encrypt all messages(Message class) that the server sends with session key
+        //otherwise the client will try to decrypt a message that can not be decrypted and it will raise an error
+        broadCastMessage(new Message("SERVER: "+username+" has connected to the server",this.sessionKey));
         broadCastUsers(serverModel.getOnlineUsers());
 
 
@@ -75,14 +77,18 @@ public class ClientHandler implements Runnable{
     }
 
     public void sendMessage(Message message) throws IOException {
+        //These messages do not need to be encrypted with session key since they are already encrypted
+        //The server simply receives encrypted message from client and broadcasts it to all other clients.
         objectOutputStream.writeObject(message);
     }
 
-    public void readMessage() throws IOException, ClassNotFoundException {
+    public void readMessage() throws IOException, ClassNotFoundException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
         while (true){
             Message message = (Message) objectInputStream.readObject();
             broadCastMessage(message);
-            serverModel.addMessage(message);
+            //we need to decrypt the message that server receives from client before we add it to server log
+            //otherwise we can not read it
+            serverModel.addEncryptedMessage(message);
         }
     }
 
@@ -95,6 +101,16 @@ public class ClientHandler implements Runnable{
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
             closeConnection();
+            e.printStackTrace();
+        } catch (NoSuchPaddingException e) {
+            e.printStackTrace();
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (BadPaddingException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
             e.printStackTrace();
         }
     }
@@ -115,9 +131,19 @@ public class ClientHandler implements Runnable{
             //remove the username and update the server online user list
             serverModel.removeUser(username);
             serverModel.addMessage(new Message("SERVER: " + username + " has disconnected from the server"));
-            broadCastMessage(new Message("SERVER: " + username + " has disconnected from the server"));
+            broadCastMessage(new Message("SERVER: " + username + " has disconnected from the server",this.sessionKey));
             broadCastUsers(serverModel.getOnlineUsers());
         } catch (IOException e){
+            e.printStackTrace();
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
+        } catch (NoSuchPaddingException e) {
+            e.printStackTrace();
+        } catch (BadPaddingException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
             e.printStackTrace();
         }
     }
