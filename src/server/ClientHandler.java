@@ -14,7 +14,6 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.util.ArrayList;
-import java.util.Base64;
 
 public class ClientHandler implements Runnable{
 
@@ -32,7 +31,7 @@ public class ClientHandler implements Runnable{
         this.clientSocket = clientConnection;
         this.serverModel = serverModel;
         //the session key will be sent to the client
-        this.sessionKey = serverModel.getSessionKey();
+        //this.sessionKey = serverModel.getSessionKey();
 
         clientHandlers.add(this);
 
@@ -49,6 +48,10 @@ public class ClientHandler implements Runnable{
         serverModel.addOnlineUser(username);
         //serverModel.addMessage(new Message("SERVER: "+username+" has connected to the server"));
         broadCastUsers(serverModel.getOnlineUsers());
+
+        Message announcement = new Message("SERVER: "+username+" has connected to the server");
+        serverModel.addMessage(announcement);
+        broadCastMessage(announcement);
 
         if (serverModel.getOnlineUsers().size() > 1) {
             // Only read public key from clients that are not the key warden
@@ -167,8 +170,9 @@ public class ClientHandler implements Runnable{
             clientHandlers.remove(this);
             //remove the username and update the server online user list
             serverModel.removeUser(username);
-            serverModel.addMessage(new Message("SERVER: " + username + " has disconnected from the server"));
-            //broadCastMessage(new Message("SERVER: " + username + " has disconnected from the server",this.sessionKey));
+            Message announcement = new Message("SERVER: " + username + " has disconnected from the server");
+            serverModel.addMessage(announcement);
+            broadCastMessage(announcement);
             broadCastUsers(serverModel.getOnlineUsers());
         } catch (IOException e){
             e.printStackTrace();

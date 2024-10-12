@@ -17,12 +17,14 @@ public class Message implements Serializable {
 
     private final String message;
     private boolean isSessionKey = false;
+    private boolean announcement = false;
 
     /**
      * Prepends the current time to the string and stores it.
      * @param message given String
      */
     public Message(String message) {
+        announcement = true;
         String time;
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");
         LocalDateTime now = LocalDateTime.now();
@@ -146,6 +148,10 @@ public class Message implements Serializable {
 
     public boolean isSessionKey(){
         return this.isSessionKey;
+    }
+
+    public boolean isAnnouncement(){
+        return announcement;
     }
 
 }

@@ -82,6 +82,10 @@ public class ClientModel {
         this.onlineUsers = (ArrayList<String>) objectInputStream.readObject();
         clientView.updateUserList();
         System.out.println(onlineUsers.size());
+        Message announcement = (Message) objectInputStream.readObject();
+        messages.add(announcement.toString());
+        clientView.updateMessages();
+
         if (onlineUsers.size()==1){
             //generate session key. Don't send it unless another client joins
             generateSessionKey();
@@ -127,6 +131,13 @@ public class ClientModel {
                 //Turn the String representation of the session key into a real AES session key that can
                 //be used for encryption/decryption. Store it in a private field(very important)
                 this.sessionKey = new SecretKeySpec(Base64.getDecoder().decode(sessionKey),"AES");
+            } else if (message.isAnnouncement()){
+                //print out message to see if it is the same encrypted string that we observe in wireshark
+                System.out.println(message.toString());
+                //Decrypt all messages that the server sends to us(client) and add them to the client log in plain text
+                //so that the client can read the messages
+                messages.add(message.toString());
+                clientView.updateMessages();
             } else {
                 //print out message to see if it is the same encrypted string that we observe in wireshark
                 System.out.println(message.toString());
