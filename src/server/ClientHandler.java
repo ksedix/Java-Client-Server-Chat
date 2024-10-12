@@ -26,6 +26,7 @@ public class ClientHandler implements Runnable{
     private static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
     private ServerModel serverModel;
     private SecretKey sessionKey;
+    private ClientHandler keyReceiver;
 
     public ClientHandler(Socket clientConnection, ServerModel serverModel) throws IOException, ClassNotFoundException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         this.clientSocket = clientConnection;
@@ -40,20 +41,44 @@ public class ClientHandler implements Runnable{
 
         //read the username that the client sends to the server, this is the first item that client sends
         this.username = (String) objectInputStream.readObject();
+
         //Read the public key that the client sends to the server. This is the second item that the client sends
-        PublicKey publicKey = (PublicKey) objectInputStream.readObject();
+        //PublicKey publicKey = (PublicKey) objectInputStream.readObject();
         //write the secret session key to the client and encrypt it with the public key that you read from the client.
-        objectOutputStream.writeObject(new Message(Base64.getEncoder().encodeToString(sessionKey.getEncoded()),publicKey));
-
+        //objectOutputStream.writeObject(new Message(Base64.getEncoder().encodeToString(sessionKey.getEncoded()),publicKey));
         serverModel.addOnlineUser(username);
-        serverModel.addMessage(new Message("SERVER: "+username+" has connected to the server"));
-
-        //encrypt all messages(Message class) that the server sends with session key
-        //otherwise the client will try to decrypt a message that can not be decrypted and it will raise an error
-        broadCastMessage(new Message("SERVER: "+username+" has connected to the server",this.sessionKey));
+        //serverModel.addMessage(new Message("SERVER: "+username+" has connected to the server"));
         broadCastUsers(serverModel.getOnlineUsers());
 
+        if (serverModel.getOnlineUsers().size() > 1) {
+            // Only read public key from clients that are not the key warden
+            //if client replies with their public key, this means they don't have a session key
+            PublicKey publicKey = (PublicKey) objectInputStream.readObject();
 
+            // Find the key warden
+            ClientHandler keyWarden = getKeyWarden();
+            if (keyWarden != null) {
+                // Forward the new client's public key to the key warden
+                keyWarden.setKeyReceiver(this);
+                keyWarden.sendPublicKey(publicKey);
+            }
+        }
+    }
+
+    public void setKeyReceiver(ClientHandler clientHandler){
+        this.keyReceiver = clientHandler;
+    }
+
+    private void sendPublicKey(PublicKey publicKey) throws IOException {
+        objectOutputStream.writeObject(publicKey);
+    }
+
+    private ClientHandler getKeyWarden() {
+        // Assuming the first client in the list is the key warden
+        if (!clientHandlers.isEmpty()) {
+            return clientHandlers.get(0);
+        }
+        return null;
     }
 
     private void broadCastUsers(ArrayList<String> onlineUsers) throws IOException {
@@ -85,10 +110,17 @@ public class ClientHandler implements Runnable{
     public void readMessage() throws IOException, ClassNotFoundException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
         while (true){
             Message message = (Message) objectInputStream.readObject();
-            broadCastMessage(message);
-            //we need to decrypt the message that server receives from client before we add it to server log
-            //otherwise we can not read it
-            serverModel.addEncryptedMessage(message);
+            System.out.println(message.isSessionKey());
+            if (message.isSessionKey()){
+                //if the message is a session key, we want to send it to the client that sent their public key
+                keyReceiver.objectOutputStream.writeObject(message);
+            } else {
+                broadCastMessage(message);
+                //we need to decrypt the message that server receives from client before we add it to server log
+                //otherwise we can not read it
+                serverModel.addMessage(message);
+                //serverModel.addEncryptedMessage(message);
+            }
         }
     }
 
@@ -103,14 +135,19 @@ public class ClientHandler implements Runnable{
             closeConnection();
             e.printStackTrace();
         } catch (NoSuchPaddingException e) {
+            closeConnection();
             e.printStackTrace();
         } catch (IllegalBlockSizeException e) {
+            closeConnection();
             e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {
+            closeConnection();
             e.printStackTrace();
         } catch (BadPaddingException e) {
+            closeConnection();
             e.printStackTrace();
         } catch (InvalidKeyException e) {
+            closeConnection();
             e.printStackTrace();
         }
     }
@@ -131,19 +168,9 @@ public class ClientHandler implements Runnable{
             //remove the username and update the server online user list
             serverModel.removeUser(username);
             serverModel.addMessage(new Message("SERVER: " + username + " has disconnected from the server"));
-            broadCastMessage(new Message("SERVER: " + username + " has disconnected from the server",this.sessionKey));
+            //broadCastMessage(new Message("SERVER: " + username + " has disconnected from the server",this.sessionKey));
             broadCastUsers(serverModel.getOnlineUsers());
         } catch (IOException e){
-            e.printStackTrace();
-        } catch (IllegalBlockSizeException e) {
-            e.printStackTrace();
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (BadPaddingException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (InvalidKeyException e) {
             e.printStackTrace();
         }
     }

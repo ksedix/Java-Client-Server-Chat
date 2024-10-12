@@ -35,11 +35,11 @@ public class ServerModel {
         KeyGenerator keyGenerator = null;
         try {
             keyGenerator = KeyGenerator.getInstance("AES");
+            //Initialize the key size to 256 bits
+            keyGenerator.init(256);
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
-        //Initialize the key size to 256 bits
-        keyGenerator.init(256);
         this.sessionKey = keyGenerator.generateKey();
     }
 
@@ -81,11 +81,12 @@ public class ServerModel {
     }
 
     public void addMessage(Message message) {
-        messages.add(message.toString());
+        messages.add(message.toString()+"\n");
         serverView.updateMessages();
     }
 
     public void addEncryptedMessage(Message encryptedMessage) throws NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
+        System.out.println(encryptedMessage.toString());
         messages.add(encryptedMessage.decrypt(this.sessionKey));
         serverView.updateMessages();
     }

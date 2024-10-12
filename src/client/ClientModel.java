@@ -2,10 +2,7 @@ package client;
 
 import message.Message;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
+import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 import javax.swing.*;
 import java.io.*;
@@ -42,12 +39,25 @@ public class ClientModel {
         KeyPairGenerator keyPairGenerator = null;
         try {
             keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+            //Set the key size to 2048 bits, this will be enough for our 1-time use of the key
+            keyPairGenerator.initialize(2048);
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
-        //Set the key size to 2048 bits, this will be enough for our 1-time use of the key
-        keyPairGenerator.initialize(2048);
         return keyPairGenerator.generateKeyPair();
+    }
+
+    private void generateSessionKey(){
+        //Create a key generator that generates a symmetric AES key
+        KeyGenerator keyGenerator = null;
+        try {
+            keyGenerator = KeyGenerator.getInstance("AES");
+            //Initialize the key size to 256 bits
+            keyGenerator.init(256);
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        this.sessionKey = keyGenerator.generateKey();
     }
 
     public ClientModel(){
@@ -69,21 +79,37 @@ public class ClientModel {
         //this is so that the server can add them to their online user list
         objectOutputStream.writeObject(username);
 
+        this.onlineUsers = (ArrayList<String>) objectInputStream.readObject();
+        clientView.updateUserList();
+        System.out.println(onlineUsers.size());
+        if (onlineUsers.size()==1){
+            //generate session key. Don't send it unless another client joins
+            generateSessionKey();
+        } else {
+            //send public key to server, server relays it to key warden
+            objectOutputStream.writeObject(this.publicKey);
+            //key warden sends message to its client handler, which relays it to our client handler
+            Message encryptedSessionKey = (Message) objectInputStream.readObject();
+            //Decrypt the message to obtain a string representation of the unencrypted session key
+            String sessionKey = encryptedSessionKey.decrypt(this.privateKey);
+            this.sessionKey = new SecretKeySpec(Base64.getDecoder().decode(sessionKey),"AES");
+        }
+
+
         //write the public key to the server so that it can use it to encrypt the secret session key
         //we will then use the private key to decrypt the session key
         //the public key is not written in encrypted form, but this is not an issue since it can only be used
         //for encryption. Only the person with the private key(i.e. client) can decrypt messages encrypted with public key
-        objectOutputStream.writeObject(this.publicKey);
+        //objectOutputStream.writeObject(this.publicKey);
 
         //Read the encrypted session key which is sent as a message from the server to the client
         //this is the first message that the server will send from the client
-        Message encryptedSessionKey = (Message) objectInputStream.readObject();
+        //Message encryptedSessionKey = (Message) objectInputStream.readObject();
         //Decrypt the message to obtain a string representation of the unencrypted session key
-        String sessionKey = encryptedSessionKey.decrypt(this.privateKey);
+        //String sessionKey = encryptedSessionKey.decrypt(this.privateKey);
         //Turn the String representation of the session key into a real AES session key that can
         //be used for encryption/decryption. Store it in a private field(very important)
-        this.sessionKey = new SecretKeySpec(Base64.getDecoder().decode(sessionKey),"AES");
-
+        //this.sessionKey = new SecretKeySpec(Base64.getDecoder().decode(sessionKey),"AES");
     }
 
     public void sendMessage(String message) throws IOException, IllegalBlockSizeException, NoSuchPaddingException, BadPaddingException, NoSuchAlgorithmException, InvalidKeyException {
@@ -95,10 +121,24 @@ public class ClientModel {
         Object obj = objectInputStream.readObject();
         if (obj instanceof Message){
             Message message = (Message) obj;
-            //Decrypt all messages that the server sends to us(client) and add them to the client log in plain text
-            //so that the client can read the messages
-            messages.add(message.decrypt(this.sessionKey));
-            clientView.updateMessages();
+            if (message.isSessionKey()){
+                //Decrypt the message to obtain a string representation of the unencrypted session key
+                String sessionKey = message.decrypt(this.privateKey);
+                //Turn the String representation of the session key into a real AES session key that can
+                //be used for encryption/decryption. Store it in a private field(very important)
+                this.sessionKey = new SecretKeySpec(Base64.getDecoder().decode(sessionKey),"AES");
+            } else {
+                //print out message to see if it is the same encrypted string that we observe in wireshark
+                System.out.println(message.toString());
+                //Decrypt all messages that the server sends to us(client) and add them to the client log in plain text
+                //so that the client can read the messages
+                messages.add(message.decrypt(this.sessionKey));
+                clientView.updateMessages();
+            }
+        } else if (obj instanceof PublicKey){
+            //if key warden receives public key from client
+          PublicKey publicKey = (PublicKey) obj;
+          objectOutputStream.writeObject(new Message(Base64.getEncoder().encodeToString(sessionKey.getEncoded()),publicKey));
         } else {
             ArrayList<String> onlineUsers = (ArrayList<String>) obj;
             this.onlineUsers = onlineUsers;
