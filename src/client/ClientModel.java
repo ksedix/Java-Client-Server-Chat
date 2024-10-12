@@ -125,13 +125,7 @@ public class ClientModel {
         Object obj = objectInputStream.readObject();
         if (obj instanceof Message){
             Message message = (Message) obj;
-            if (message.isSessionKey()){
-                //Decrypt the message to obtain a string representation of the unencrypted session key
-                String sessionKey = message.decrypt(this.privateKey);
-                //Turn the String representation of the session key into a real AES session key that can
-                //be used for encryption/decryption. Store it in a private field(very important)
-                this.sessionKey = new SecretKeySpec(Base64.getDecoder().decode(sessionKey),"AES");
-            } else if (message.isAnnouncement()){
+            if (message.isAnnouncement()){
                 //print out message to see if it is the same encrypted string that we observe in wireshark
                 System.out.println(message.toString());
                 //Decrypt all messages that the server sends to us(client) and add them to the client log in plain text
