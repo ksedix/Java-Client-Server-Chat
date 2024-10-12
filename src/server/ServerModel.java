@@ -8,9 +8,9 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.InvalidKeyException;
+import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Base64;
 
 /**
  * The server model stores all the data of our application, such as all the messages that have been sent
@@ -23,24 +23,36 @@ public class ServerModel {
     private ArrayList<String> onlineUsers = new ArrayList<>();
     private ServerSocket serverSocket;
     private ServerView serverView;
-    private SecretKey secretKey;
+
+    //NEW FIELD
+    //The session key will be used to encrypt all regular messages between the client and the server
+    //It needs to be securely shared with the client from the server
+    //Hence, it needs to be encrypted with the clients public key and sent back to the client
+    private SecretKey sessionKey;
 
     public ServerModel(){
+        //Create a key generator that generates a symmetric AES key
         KeyGenerator keyGenerator = null;
         try {
             keyGenerator = KeyGenerator.getInstance("AES");
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
-        // For AES, common key sizes are 128, 192, or 256 bits
-        keyGenerator.init(256); // Initialize with a key size of 256 bits
-
-        // Generate the symmetric key
-        this.secretKey = keyGenerator.generateKey();
+        //Initialize the key size to 256 bits
+        keyGenerator.init(256);
+        this.sessionKey = keyGenerator.generateKey();
     }
 
-    public void startServer() throws IOException, ClassNotFoundException {
-        System.out.println(Base64.getEncoder().encodeToString(secretKey.getEncoded()));
+    /**
+     * Getter so that ClientHandler can access the session key
+     * @return
+     */
+    public SecretKey getSessionKey(){
+        return sessionKey;
+    }
+
+
+    public void startServer() throws IOException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, InvalidKeyException, ClassNotFoundException {
         serverSocket = new ServerSocket(PORT_NUMBER);
         addMessage(new Message("SERVER: "+"Server has been started and is listening for connections on port "+PORT_NUMBER));
         //blocking operation
@@ -50,9 +62,8 @@ public class ServerModel {
             Thread thread = new Thread(clientHandler);
             thread.start();
         }
+
     }
-
-
 
     public void addOnlineUser(String username) {
         //The line break is necessary so that the users display on new lines in the online users text area.
@@ -74,11 +85,10 @@ public class ServerModel {
         serverView.updateMessages();
     }
 
-    public void addEncryptedMessage(Message message) throws NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
-        messages.add(message.decrypt(secretKey));
+    public void addEncryptedMessage(Message encryptedMessage) throws NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
+        messages.add(encryptedMessage.decrypt(this.sessionKey));
         serverView.updateMessages();
     }
-
 
     public String getLatestMessage(){
         return messages.get(messages.size()-1);
@@ -123,8 +133,6 @@ public class ServerModel {
         }
     }
 
-    public SecretKey getSecretKey(){
-        return this.secretKey;
-    }
+
 
 }

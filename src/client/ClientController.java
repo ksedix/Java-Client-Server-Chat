@@ -43,7 +43,7 @@ public class ClientController extends JFrame {
                         //System.out.println("Change to chatPanel");
                         clientView.showChat();
                         setTitle("Client- "+username);
-                    } catch (IOException | ClassNotFoundException exception) {
+                    } catch (IOException exception) {
                         clientView.setErrorMessage("Failed to connect to the server");
                         exception.printStackTrace();
                     } catch (NoSuchPaddingException noSuchPaddingException) {
@@ -56,6 +56,8 @@ public class ClientController extends JFrame {
                         badPaddingException.printStackTrace();
                     } catch (InvalidKeyException invalidKeyException) {
                         invalidKeyException.printStackTrace();
+                    } catch (ClassNotFoundException classNotFoundException) {
+                        classNotFoundException.printStackTrace();
                     }
                 }
 
@@ -92,6 +94,16 @@ public class ClientController extends JFrame {
                     ex.printStackTrace();
                     clientModel.disconnect();
                     clientView.showHome();
+                } catch (IllegalBlockSizeException illegalBlockSizeException) {
+                    illegalBlockSizeException.printStackTrace();
+                } catch (NoSuchPaddingException noSuchPaddingException) {
+                    noSuchPaddingException.printStackTrace();
+                } catch (BadPaddingException badPaddingException) {
+                    badPaddingException.printStackTrace();
+                } catch (NoSuchAlgorithmException noSuchAlgorithmException) {
+                    noSuchAlgorithmException.printStackTrace();
+                } catch (InvalidKeyException invalidKeyException) {
+                    invalidKeyException.printStackTrace();
                 }
             }
         });
@@ -107,6 +119,16 @@ public class ClientController extends JFrame {
                         clientView.getMessageField().setText("");
                     } catch (IOException ex) {
                         ex.printStackTrace();
+                    } catch (IllegalBlockSizeException illegalBlockSizeException) {
+                        illegalBlockSizeException.printStackTrace();
+                    } catch (NoSuchPaddingException noSuchPaddingException) {
+                        noSuchPaddingException.printStackTrace();
+                    } catch (BadPaddingException badPaddingException) {
+                        badPaddingException.printStackTrace();
+                    } catch (NoSuchAlgorithmException noSuchAlgorithmException) {
+                        noSuchAlgorithmException.printStackTrace();
+                    } catch (InvalidKeyException invalidKeyException) {
+                        invalidKeyException.printStackTrace();
                     }
                 }
             }
