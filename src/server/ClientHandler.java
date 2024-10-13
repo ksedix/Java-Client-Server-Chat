@@ -26,12 +26,14 @@ public class ClientHandler implements Runnable{
     private static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
     private ServerModel serverModel;
     private SecretKey sessionKey;
+    //this will be the client Handler that the key warden will send the key back to
+    private ClientHandler keyReceiver;
 
     public ClientHandler(Socket clientConnection, ServerModel serverModel) throws IOException, ClassNotFoundException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         this.clientSocket = clientConnection;
         this.serverModel = serverModel;
         //the session key will be sent to the client
-        this.sessionKey = serverModel.getSessionKey();
+        //this.sessionKey = serverModel.getSessionKey();
 
         clientHandlers.add(this);
 
@@ -40,20 +42,44 @@ public class ClientHandler implements Runnable{
 
         //read the username that the client sends to the server, this is the first item that client sends
         this.username = (String) objectInputStream.readObject();
-        //Read the public key that the client sends to the server. This is the second item that the client sends
+
+/*        //Read the public key that the client sends to the server. This is the second item that the client sends
         PublicKey publicKey = (PublicKey) objectInputStream.readObject();
         //write the secret session key to the client and encrypt it with the public key that you read from the client.
-        objectOutputStream.writeObject(new Message(Base64.getEncoder().encodeToString(sessionKey.getEncoded()),publicKey));
+        objectOutputStream.writeObject(new Message(Base64.getEncoder().encodeToString(sessionKey.getEncoded()),publicKey));*/
 
         serverModel.addOnlineUser(username);
-        serverModel.addMessage(new Message("SERVER: "+username+" has connected to the server"));
-
-        //encrypt all messages(Message class) that the server sends with session key
-        //otherwise the client will try to decrypt a message that can not be decrypted and it will raise an error
-        broadCastMessage(new Message("SERVER: "+username+" has connected to the server",this.sessionKey));
+        Message announcement = new Message("SERVER: "+username+" has connected to the server");
+        serverModel.addMessage(announcement);
+        broadCastMessage(announcement);
         broadCastUsers(serverModel.getOnlineUsers());
 
+        if (serverModel.getOnlineUsers().size() > 1){
+            //read the public key that the client sends to the server
+            PublicKey publicKey = (PublicKey) objectInputStream.readObject();
+            //we need to send the public key to the key warden so they can encrypt the
+            //session key and send it back to the client(key receiver).
+            ClientHandler keyWarden = getKeyWarden();
+            if (keyWarden != null) {
+                //send the public key to the client that is the key warden. Here we use their public key.
+                keyWarden.objectOutputStream.writeObject(publicKey);
+                //we also need to make the keywarden client handler know who to send the key back to
+                keyWarden.setKeyReceiver(this);
+            }
+        }
+    }
 
+    private void setKeyReceiver(ClientHandler clientHandler) {
+        this.keyReceiver = clientHandler;
+    }
+
+
+    private ClientHandler getKeyWarden() {
+        if (!clientHandlers.isEmpty()){
+            return clientHandlers.get(0);
+        } else {
+            return null;
+        }
     }
 
     private void broadCastUsers(ArrayList<String> onlineUsers) throws IOException {
@@ -85,10 +111,19 @@ public class ClientHandler implements Runnable{
     public void readMessage() throws IOException, ClassNotFoundException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
         while (true){
             Message message = (Message) objectInputStream.readObject();
-            broadCastMessage(message);
-            //we need to decrypt the message that server receives from client before we add it to server log
-            //otherwise we can not read it
-            serverModel.addEncryptedMessage(message);
+            //we only want to broadcast the message if it is a regular message. If it is a session key, we forward
+            //it to the key receiver
+            if (message.isSessionKey()){
+                this.keyReceiver.objectOutputStream.writeObject(message);
+            } else {
+                broadCastMessage(message);
+                serverModel.addMessage(message);
+                //we need to decrypt the message that server receives from client before we add it to server log
+                //otherwise we can not read it
+                //this method decrypts messages before adding them to the server log
+                //since the server does not know of the encryption key, this should not be used
+                //serverModel.addEncryptedMessage(message);
+            }
         }
     }
 
@@ -131,19 +166,9 @@ public class ClientHandler implements Runnable{
             //remove the username and update the server online user list
             serverModel.removeUser(username);
             serverModel.addMessage(new Message("SERVER: " + username + " has disconnected from the server"));
-            broadCastMessage(new Message("SERVER: " + username + " has disconnected from the server",this.sessionKey));
+            broadCastMessage(new Message("SERVER: " + username + " has disconnected from the server"));
             broadCastUsers(serverModel.getOnlineUsers());
         } catch (IOException e){
-            e.printStackTrace();
-        } catch (IllegalBlockSizeException e) {
-            e.printStackTrace();
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (BadPaddingException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (InvalidKeyException e) {
             e.printStackTrace();
         }
     }

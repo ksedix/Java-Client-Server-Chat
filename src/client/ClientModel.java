@@ -2,10 +2,7 @@ package client;
 
 import message.Message;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
+import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 import javax.swing.*;
 import java.io.*;
@@ -69,21 +66,43 @@ public class ClientModel {
         //this is so that the server can add them to their online user list
         objectOutputStream.writeObject(username);
 
-        //write the public key to the server so that it can use it to encrypt the secret session key
-        //we will then use the private key to decrypt the session key
-        //the public key is not written in encrypted form, but this is not an issue since it can only be used
-        //for encryption. Only the person with the private key(i.e. client) can decrypt messages encrypted with public key
-        objectOutputStream.writeObject(this.publicKey);
+        //read the announcement and user list that the server sends to the client
+        //the announcement is sent first
+        Message announcement = (Message) objectInputStream.readObject();
+        messages.add(announcement.toString());
+        clientView.updateMessages();
+        //read the user list, this is sent after the announcement
+        this.onlineUsers = (ArrayList<String>) objectInputStream.readObject();
+        clientView.updateUserList();
 
-        //Read the encrypted session key which is sent as a message from the server to the client
-        //this is the first message that the server will send from the client
-        Message encryptedSessionKey = (Message) objectInputStream.readObject();
-        //Decrypt the message to obtain a string representation of the unencrypted session key
-        String sessionKey = encryptedSessionKey.decrypt(this.privateKey);
-        //Turn the String representation of the session key into a real AES session key that can
-        //be used for encryption/decryption. Store it in a private field(very important)
-        this.sessionKey = new SecretKeySpec(Base64.getDecoder().decode(sessionKey),"AES");
+        //check if the user list contains only 1 client(yourself) or more than 1 client(yourself + other people)
+        if (this.onlineUsers.size()==1){
+            generateSessionKey();
+        } else {
+            objectOutputStream.writeObject(this.publicKey);
+            //Read the encrypted session key which is sent as a message from the server to the client
+            //this is the first message that the server will send from the client
+            Message encryptedSessionKey = (Message) objectInputStream.readObject();
+            System.out.println(encryptedSessionKey.toString());
+            //Decrypt the message to obtain a string representation of the unencrypted session key
+            String sessionKey = encryptedSessionKey.decrypt(this.privateKey);
+            //Turn the String representation of the session key into a real AES session key that can
+            //be used for encryption/decryption. Store it in a private field(very important)
+            this.sessionKey = new SecretKeySpec(Base64.getDecoder().decode(sessionKey),"AES");
+        }
+    }
 
+    private void generateSessionKey() {
+        //Create a key generator that generates a symmetric AES key
+        KeyGenerator keyGenerator = null;
+        try {
+            keyGenerator = KeyGenerator.getInstance("AES");
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        //Initialize the key size to 256 bits
+        keyGenerator.init(256);
+        this.sessionKey = keyGenerator.generateKey();
     }
 
     public void sendMessage(String message) throws IOException, IllegalBlockSizeException, NoSuchPaddingException, BadPaddingException, NoSuchAlgorithmException, InvalidKeyException {
@@ -95,10 +114,20 @@ public class ClientModel {
         Object obj = objectInputStream.readObject();
         if (obj instanceof Message){
             Message message = (Message) obj;
-            //Decrypt all messages that the server sends to us(client) and add them to the client log in plain text
+            //we need to check if message is announcement or not. Announcements should not be decrypted
+            if (message.isAnnouncement()){
+                messages.add(message.toString());
+            } else {
+                //Decrypt all messages that the server sends to us(client) and add them to the client log in plain text
+                messages.add(message.decrypt(this.sessionKey));
+            }
             //so that the client can read the messages
-            messages.add(message.decrypt(this.sessionKey));
             clientView.updateMessages();
+        } else if (obj instanceof PublicKey){
+          //in case we are the key warden, we will receive the public key as a message
+          PublicKey publicKey = (PublicKey) obj;
+          //we will use the public key to encrypt the session key and send it back to the server
+          objectOutputStream.writeObject(new Message(Base64.getEncoder().encodeToString(sessionKey.getEncoded()),publicKey));
         } else {
             ArrayList<String> onlineUsers = (ArrayList<String>) obj;
             this.onlineUsers = onlineUsers;

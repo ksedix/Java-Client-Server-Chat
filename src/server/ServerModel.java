@@ -81,7 +81,13 @@ public class ServerModel {
     }
 
     public void addMessage(Message message) {
-        messages.add(message.toString());
+        if (message.isAnnouncement()) {
+            messages.add(message.toString());
+        } else {
+            //this will make each encrypted message on a new line since they do not have new line character once they
+            //are encrypted unless they are decrypted
+            messages.add(message.toString()+"\n");
+        }
         serverView.updateMessages();
     }
 
