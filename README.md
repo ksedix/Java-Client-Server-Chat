@@ -1,6 +1,8 @@
 # Java-Client-Server-Chat
 A Client-Server chat application made in Java using Java Swing for front-end and Java Sockets for back-end.  
-Tutorial for making the app: https://youtu.be/i-9FJizC3a8
+Tutorial for making the app: https://youtu.be/i-9FJizC3a8  
+Tutorial for implementing standard encryption: https://youtu.be/vKJSMRI8W7w  
+Tutorial for implementing end-to-end encryption: https://youtu.be/i7_OQZiklAs  
 
 ## Preview
 
