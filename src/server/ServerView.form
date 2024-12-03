@@ -45,7 +45,7 @@
         </constraints>
         <properties>
           <font size="16" style="1"/>
-          <text value="Chat"/>
+          <text value="Encrypted Chat"/>
         </properties>
       </component>
       <component id="7fdf6" class="javax.swing.JLabel">

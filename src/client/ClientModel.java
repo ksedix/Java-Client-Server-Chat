@@ -156,9 +156,9 @@ public class ClientModel {
     public ArrayList<String> getOnlineUsers(){
         return onlineUsers;
     }
-    //Observer pattern will be necessary because the clientmodel needs to notify the clientview when
+    //Observer pattern will be necessary because the ClientModel needs to notify the ClientView when
     //it has read a new message. The client controller can not do that because the client controller does not know
-    // when the client has read a new message from the server. Therefore the client model needs to notify the view.
+    // when the client has read a new message from the server. Therefore the Client Model needs to notify the view.
     public void addObserver(ClientView clientView){
         this.clientView = clientView;
     }
