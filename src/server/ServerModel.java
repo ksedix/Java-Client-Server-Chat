@@ -24,35 +24,6 @@ public class ServerModel {
     private ServerSocket serverSocket;
     private ServerView serverView;
 
-    //NEW FIELD
-    //The session key will be used to encrypt all regular messages between the client and the server
-    //It needs to be securely shared with the client from the server
-    //Hence, it needs to be encrypted with the clients public key and sent back to the client
-    //private SecretKey sessionKey;
-
-/*    public ServerModel(){
-        //Create a key generator that generates a symmetric AES key
-        KeyGenerator keyGenerator = null;
-        try {
-            keyGenerator = KeyGenerator.getInstance("AES");
-            //Initialize the key size to 256 bits
-            keyGenerator.init(256);
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-        this.sessionKey = keyGenerator.generateKey();
-    }*/
-
-    /**
-     * Getter so that ClientHandler can access the session key
-     * @return
-     */
-    /*
-    public SecretKey getSessionKey(){
-        return sessionKey;
-    }
-    */
-
     public void startServer() throws IOException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, InvalidKeyException, ClassNotFoundException {
         serverSocket = new ServerSocket(PORT_NUMBER);
         addMessage(new Message("SERVER: "+"Server has been started and is listening for connections on port "+PORT_NUMBER));
@@ -89,14 +60,6 @@ public class ServerModel {
         }
         serverView.updateMessages();
     }
-
-    /*
-    public void addEncryptedMessage(Message encryptedMessage) throws NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
-        System.out.println(encryptedMessage.toString());
-        messages.add(encryptedMessage.decrypt(this.sessionKey));
-        serverView.updateMessages();
-    }
-     */
 
     public String getLatestMessage(){
         return messages.get(messages.size()-1);

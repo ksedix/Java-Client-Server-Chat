@@ -30,8 +30,6 @@ public class ClientHandler implements Runnable{
     public ClientHandler(Socket clientConnection, ServerModel serverModel) throws IOException, ClassNotFoundException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         this.clientSocket = clientConnection;
         this.serverModel = serverModel;
-        //the session key will be sent to the client
-        //this.sessionKey = serverModel.getSessionKey();
 
         clientHandlers.add(this);
 
@@ -41,14 +39,12 @@ public class ClientHandler implements Runnable{
         //read the username that the client sends to the server, this is the first item that client sends
         this.username = (String) objectInputStream.readObject();
 
-        //Read the public key that the client sends to the server. This is the second item that the client sends
-        //PublicKey publicKey = (PublicKey) objectInputStream.readObject();
-        //write the secret session key to the client and encrypt it with the public key that you read from the client.
-        //objectOutputStream.writeObject(new Message(Base64.getEncoder().encodeToString(sessionKey.getEncoded()),publicKey));
         serverModel.addOnlineUser(username);
-        //serverModel.addMessage(new Message("SERVER: "+username+" has connected to the server"));
         broadCastUsers(serverModel.getOnlineUsers());
 
+        //the announcement should be sent unencrypted because the server does not have any encryption key
+        //if the client instead sent the announcement to the server to broadcast it, the server would not be able to decrypt it
+        //we want the announcement to be visible in server log amongst all the other encrypted ciphertext-
         Message announcement = new Message("SERVER: "+username+" has connected to the server");
         serverModel.addMessage(announcement);
         broadCastMessage(announcement);
@@ -119,10 +115,8 @@ public class ClientHandler implements Runnable{
                 keyReceiver.objectOutputStream.writeObject(message);
             } else {
                 broadCastMessage(message);
-                //we need to decrypt the message that server receives from client before we add it to server log
-                //otherwise we can not read it
+                //the server can not decrypt the message so we simply add the encrypted ciphertext to the server chat log.
                 serverModel.addMessage(message);
-                //serverModel.addEncryptedMessage(message);
             }
         }
     }
